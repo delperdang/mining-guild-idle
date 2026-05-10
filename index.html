@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mining Guild Idle</title>
+    <style>
+        /* Reset */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #111;
+            color: #d9c082;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* OSRS Colors & Themes */
+        :root {
+            --bg-dark: #201a15;
+            --bg-panel: #3a2f26;
+            --border-light: #6e5c47;
+            --border-dark: #1f1812;
+            --text-yellow: #ffff00;
+            --text-orange: #ff981f;
+            --text-white: #ffffff;
+            --text-red: #ff0000;
+            --text-green: #00ff00;
+            --progress-bg: #4a0000;
+            --progress-fill: #007700;
+        }
+
+        .stone-bg {
+            background-color: #3b3127;
+            background-image:
+                radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.4) 100%),
+                linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.05) 75%, rgba(255, 255, 255, 0.05)),
+                linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.05) 75%, rgba(255, 255, 255, 0.05));
+            background-size: 100% 100%, 20px 20px, 20px 20px;
+            background-position: 0 0, 0 0, 10px 10px;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            border-left: 2px solid #000;
+            border-right: 2px solid #000;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Header */
+        #header {
+            height: 60px;
+            background: var(--bg-dark);
+            border-bottom: 3px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 10;
+        }
+
+        .header-stat {
+            font-weight: bold;
+            color: var(--text-orange);
+            text-shadow: 1px 1px 0px #000;
+            font-size: 1.2rem;
+            white-space: nowrap;
+        }
+
+        #game-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation */
+        #sidebar {
+            width: 220px;
+            background: var(--bg-panel);
+            border-right: 3px solid var(--border-dark);
+            border-left: 3px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            padding-top: 10px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-orange);
+            font-size: 1.1rem;
+            padding: 15px;
+            text-align: left;
+            cursor: pointer;
+            text-shadow: 1px 1px 0px #000;
+            font-family: inherit;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border-dark);
+            transition: background 0.2s;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-btn.active {
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-yellow);
+            border-left: 5px solid var(--text-yellow);
+            padding-left: 10px;
+        }
+
+        /* Main Content Area */
+        #main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tab {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        .tab.active {
+            display: flex;
+        }
+
+        /* Panels */
+        .panel {
+            background: rgba(58, 47, 38, 0.9);
+            border: 3px solid var(--border-light);
+            border-bottom-color: var(--border-dark);
+            border-right-color: var(--border-dark);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+        }
+
+        .panel-title {
+            color: var(--text-orange);
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 0px #000;
+            text-align: center;
+            border-bottom: 2px solid #111;
+            padding-bottom: 10px;
+        }
+
+        /* Game Log */
+        #game-log {
+            height: 160px;
+            background: #000;
+            border-top: 3px solid var(--border-light);
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            color: #fff;
+            text-shadow: 1px 1px 0px #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+        }
+
+        .log-drop {
+            color: #00ff00;
+        }
+
+        .log-level {
+            color: #00ffff;
+        }
+
+        .log-info {
+            color: #aaaaaa;
+        }
+
+        .log-red {
+            color: #ff5555;
+        }
+
+        /* Buttons */
+        .osrs-btn {
+            background: #4a1505;
+            border: 2px solid #8c2a0a;
+            border-bottom-color: #2b0c03;
+            border-right-color: #2b0c03;
+            color: var(--text-yellow);
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 8px 16px;
+            cursor: pointer;
+            text-shadow: 1px 1px 0px #000;
+            transition: transform 0.1s;
+            border-radius: 2px;
+        }
+
+        .osrs-btn:active {
+            transform: scale(0.95);
+            border-color: #2b0c03;
+            border-bottom-color: #8c2a0a;
+            border-right-color: #8c2a0a;
+        }
+
+        .osrs-btn:disabled {
+            background: #333;
+            border-color: #555;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            background: var(--progress-bg);
+            height: 20px;
+            border: 2px solid #111;
+            position: relative;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: var(--progress-fill);
+            height: 100%;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 0.8rem;
+            line-height: 18px;
+            color: #fff;
+            text-shadow: 1px 1px 0px #000;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        /* Rocks & Nodes */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .node {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--border-light);
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            position: relative;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 140px;
+        }
+
+        .node:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .node.active {
+            border-color: var(--text-yellow);
+            background: rgba(255, 255, 0, 0.1);
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.2);
+        }
+
+        .node-icon {
+            font-size: 3rem;
+            margin-bottom: 5px;
+        }
+
+        .node-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            text-shadow: 1px 1px 0px #000;
+            margin-bottom: 5px;
+        }
+
+        .node-req {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        .node-locked {
+            opacity: 0.5;
+            filter: grayscale(100%);
+            cursor: not-allowed;
+        }
+
+        .node-locked-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ff0000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 2;
+            border-radius: 2px;
+        }
+
+        /* Lists / Tables */
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+        .item-name {
+            color: var(--text-white);
+            font-weight: bold;
+        }
+
+        .item-qty {
+            color: var(--text-orange);
+            margin-left: 10px;
+        }
+
+        /* Animation */
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-40px);
+            }
+        }
+
+        .floating-text {
+            position: absolute;
+            color: #00ff00;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-shadow: 1px 1px 0px #000;
+            pointer-events: none;
+            animation: floatUp 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            z-index: 50;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game-container">
+        <div id="header">
+            <div class="header-stat" id="hdr-mining" style="width: 150px;">Mining Lvl: 1</div>
+            <div style="flex:1; margin: 0 20px; max-width: 400px;">
+                <div class="progress-container">
+                    <div id="hdr-progress" class="progress-bar"></div>
+                    <div id="hdr-progress-text" class="progress-text">0 / 83 XP</div>
+                </div>
+            </div>
+            <div class="header-stat" id="hdr-smithing" style="width: 160px; text-align: center;">Smithing Lvl: 1</div>
+            <div class="header-stat" id="hdr-gold" style="width: 150px; text-align: right; color: var(--text-yellow);">
+                Gold: 0</div>
+        </div>
+
+        <div id="game-body">
+            <div id="sidebar">
+                <button id="btn-mining" class="nav-btn active" onclick="showTab('mining')">⛏️ Mining</button>
+                <button id="btn-smelting" class="nav-btn" onclick="showTab('smelting')">🔥 Smelting</button>
+                <button id="btn-smithing" class="nav-btn" onclick="showTab('smithing')">🔨 Smithing</button>
+                <button id="btn-shop" class="nav-btn" onclick="showTab('shop')">💰 Guild Shop</button>
+                <button id="btn-inventory" class="nav-btn" onclick="showTab('inventory')">🎒 Inventory</button>
+                <button id="btn-stats" class="nav-btn" onclick="showTab('stats')">📊 Stats & Settings</button>
+            </div>
+
+            <div id="main-content" class="stone-bg">
+                <div id="tab-mining" class="tab active"></div>
+                <div id="tab-smelting" class="tab"></div>
+                <div id="tab-smithing" class="tab"></div>
+                <div id="tab-shop" class="tab"></div>
+                <div id="tab-inventory" class="tab"></div>
+                <div id="tab-stats" class="tab"></div>
+            </div>
+        </div>
+
+        <div id="game-log"></div>
+    </div>
+
+    <script>
+        // --- Data Definitions ---
+
+        const ORES = {
+            copper: { id: 'copper', name: 'Copper Ore', level: 1, xp: 17.5, effort: 10, symbol: '🪨', color: '#b87333', value: 2 },
+            tin: { id: 'tin', name: 'Tin Ore', level: 1, xp: 17.5, effort: 10, symbol: '🪨', color: '#d3d4d5', value: 2 },
+            iron: { id: 'iron', name: 'Iron Ore', level: 15, xp: 35, effort: 30, symbol: '🪨', color: '#7a5a54', value: 10 },
+            coal: { id: 'coal', name: 'Coal', level: 30, xp: 50, effort: 60, symbol: '🪨', color: '#2b2b2b', value: 25 },
+            gold: { id: 'gold', name: 'Gold Ore', level: 40, xp: 65, effort: 90, symbol: '🪨', color: '#ffd700', value: 100 },
+            mithril: { id: 'mithril', name: 'Mithril Ore', level: 55, xp: 80, effort: 120, symbol: '🪨', color: '#4a4a8a', value: 170 },
+            adamant: { id: 'adamant', name: 'Adamantite Ore', level: 70, xp: 95, effort: 180, symbol: '🪨', color: '#3a5a3a', value: 400 },
+            runite: { id: 'runite', name: 'Runite Ore', level: 85, xp: 125, effort: 300, symbol: '🪨', color: '#87ceeb', value: 1200 },
+            amethyst: { id: 'amethyst', name: 'Amethyst', level: 92, xp: 240, effort: 500, symbol: '💎', color: '#9966cc', value: 3000 }
+        };
+
+        const BARS = {
+            bronzeBar: { id: 'bronzeBar', name: 'Bronze Bar', level: 1, xp: 6.2, req: { copper: 1, tin: 1 }, value: 10 },
+            ironBar: { id: 'ironBar', name: 'Iron Bar', level: 15, xp: 12.5, req: { iron: 1 }, value: 25 },
+            steelBar: { id: 'steelBar', name: 'Steel Bar', level: 30, xp: 17.5, req: { iron: 1, coal: 2 }, value: 80 },
+            goldBar: { id: 'goldBar', name: 'Gold Bar', level: 40, xp: 22.5, req: { gold: 1 }, value: 220 },
+            mithrilBar: { id: 'mithrilBar', name: 'Mithril Bar', level: 50, xp: 30, req: { mithril: 1, coal: 4 }, value: 300 },
+            adamantBar: { id: 'adamantBar', name: 'Adamant Bar', level: 70, xp: 37.5, req: { adamant: 1, coal: 6 }, value: 800 },
+            runiteBar: { id: 'runiteBar', name: 'Runite Bar', level: 85, xp: 50, req: { runite: 1, coal: 8 }, value: 2500 }
+        };
+
+        const PICKAXES = {
+            bronze: { id: 'bronze', name: 'Bronze Pickaxe', smithReq: 1, miningPower: 1, cost: { bronzeBar: 2 } },
+            iron: { id: 'iron', name: 'Iron Pickaxe', smithReq: 15, miningPower: 2, cost: { ironBar: 2 } },
+            steel: { id: 'steel', name: 'Steel Pickaxe', smithReq: 30, miningPower: 3, cost: { steelBar: 2 } },
+            mithril: { id: 'mithril', name: 'Mithril Pickaxe', smithReq: 50, miningPower: 5, cost: { mithrilBar: 3 } },
+            adamant: { id: 'adamant', name: 'Adamant Pickaxe', smithReq: 70, miningPower: 7, cost: { adamantBar: 3 } },
+            rune: { id: 'rune', name: 'Rune Pickaxe', smithReq: 85, miningPower: 10, cost: { runiteBar: 3 } },
+            dragon: { id: 'dragon', name: 'Dragon Pickaxe', smithReq: 90, miningPower: 15, cost: { runiteBar: 5, goldBar: 10 } },
+            crystal: { id: 'crystal', name: 'Crystal Pickaxe', smithReq: 99, miningPower: 25, cost: { runiteBar: 10, amethyst: 5 } }
+        };
+
+        const GEMS = {
+            sapphire: { id: 'sapphire', name: 'Uncut Sapphire', value: 100, chance: 0.005, color: '#0f52ba' },
+            emerald: { id: 'emerald', name: 'Uncut Emerald', value: 250, chance: 0.0025, color: '#50c878' },
+            ruby: { id: 'ruby', name: 'Uncut Ruby', value: 500, chance: 0.001, color: '#e0115f' },
+            diamond: { id: 'diamond', name: 'Uncut Diamond', value: 1000, chance: 0.0005, color: '#b9f2ff' }
+        };
+
+        const SHOP_ITEMS = {
+            miner: { id: 'miner', name: 'Dwarven Miner', baseCost: 100, power: 0.5, desc: '+0.5 Idle Power/sec' },
+            foreman: { id: 'foreman', name: 'Dwarven Foreman', baseCost: 1000, power: 5, desc: '+5 Idle Power/sec' },
+            machine: { id: 'machine', name: 'Steam Machine', baseCost: 10000, power: 50, desc: '+50 Idle Power/sec' },
+            overlord: { id: 'overlord', name: 'Dwarven Overlord', baseCost: 100000, power: 500, desc: '+500 Idle Power/sec' },
+            autoSmelt: { id: 'autoSmelt', name: 'Auto-Smelter', baseCost: 50000, power: 0, desc: 'Smelts active recipe automatically (1/sec)', max: 1 }
+        };
+
+        // --- XP Formula (OSRS) ---
+        const xpTable = [0];
+        let points = 0;
+        for (let lvl = 1; lvl <= 99; lvl++) {
+            xpTable[lvl] = Math.floor(points / 4);
+            points += Math.floor(lvl + 300 * Math.pow(2, lvl / 7));
+        }
+
+        function getLevel(xp) {
+            for (let i = 99; i >= 1; i--) {
+                if (xp >= xpTable[i]) return i;
+            }
+            return 1;
+        }
+
+        // --- Game State ---
+        let state = {
+            miningXp: 0,
+            smithingXp: 0,
+            gold: 0,
+            ores: { copper: 0, tin: 0, iron: 0, coal: 0, gold: 0, mithril: 0, adamant: 0, runite: 0, amethyst: 0 },
+            bars: { bronzeBar: 0, ironBar: 0, steelBar: 0, goldBar: 0, mithrilBar: 0, adamantBar: 0, runiteBar: 0 },
+            gems: { sapphire: 0, emerald: 0, ruby: 0, diamond: 0 },
+            pickaxe: 'bronze',
+            shop: { miner: 0, foreman: 0, machine: 0, overlord: 0, autoSmelt: 0 },
+            activeRock: 'copper',
+            activeRockEffort: 0,
+            activeBar: 'bronzeBar',
+            lastTick: Date.now()
+        };
+
+        let currentTab = 'mining';
+        let lastRenderTime = 0;
+        let smeltAccumulator = 0;
+
+        // --- Core Logic ---
+
+        function getIdlePower() {
+            return state.shop.miner * SHOP_ITEMS.miner.power +
+                state.shop.foreman * SHOP_ITEMS.foreman.power +
+                state.shop.machine * SHOP_ITEMS.machine.power +
+                state.shop.overlord * SHOP_ITEMS.overlord.power;
+        }
+
+        function tick() {
+            let now = Date.now();
+            let dt = (now - state.lastTick) / 1000;
+            state.lastTick = now;
+
+            let stateChanged = false;
+
+            // Idle Mining
+            let idlePower = getIdlePower();
+            if (idlePower > 0) {
+                state.activeRockEffort += idlePower * dt;
+                stateChanged = checkMineCompletion() || stateChanged;
+            }
+
+            // Auto Smelting
+            if (state.shop.autoSmelt > 0 && state.activeBar) {
+                smeltAccumulator += dt;
+                let maxSmelts = Math.floor(smeltAccumulator);
+                if (maxSmelts > 0) {
+                    let actual = attemptSmelt(state.activeBar, maxSmelts);
+                    smeltAccumulator -= actual;
+                    if (actual < maxSmelts) smeltAccumulator = 0;
+                    if (actual > 0) stateChanged = true;
+                }
+            }
+
+            // Fast UI Updates
+            updateHeader();
+            if (currentTab === 'mining') updateMiningUI();
+
+            // Slow UI Updates
+            if (stateChanged || (now - lastRenderTime > 500)) {
+                if (currentTab === 'smelting') renderSmelting();
+                if (currentTab === 'smithing') renderSmithing();
+                if (currentTab === 'shop') renderShop();
+                if (currentTab === 'inventory') renderInventory();
+                if (currentTab === 'stats') renderStats();
+                lastRenderTime = now;
+            }
+        }
+
+        function checkMineCompletion() {
+            let rockDef = ORES[state.activeRock];
+            if (!rockDef) return false;
+            let effortNeeded = rockDef.effort;
+            let completions = Math.floor(state.activeRockEffort / effortNeeded);
+
+            if (completions > 0) {
+                let prevLevel = getLevel(state.miningXp);
+
+                state.activeRockEffort -= completions * effortNeeded;
+                state.ores[state.activeRock] += completions;
+                state.miningXp += rockDef.xp * completions;
+
+                // Drops
+                let gemDropped = false;
+                if (completions < 100) {
+                    for (let i = 0; i < completions; i++) gemDropped = rollGems() || gemDropped;
+                } else {
+                    // Fast approximation for massive time skips
+                    for (let k in GEMS) {
+                        let gem = GEMS[k];
+                        let expected = completions * gem.chance;
+                        let guaranteed = Math.floor(expected);
+                        let fractional = expected - guaranteed;
+                        state.gems[k] += guaranteed;
+                        if (guaranteed > 0) gemDropped = true;
+                        if (Math.random() < fractional) {
+                            state.gems[k]++;
+                            gemDropped = true;
+                        }
+                    }
+                    if (gemDropped) logMessage(`Found some rare gems while you were away!`, 'log-drop');
+                }
+
+                if (completions === 1 && !gemDropped) {
+                    // Quiet for single idle mines to prevent spam
+                } else {
+                    logMessage(`Mined ${completions}x ${rockDef.name}`);
+                }
+
+                let newLevel = getLevel(state.miningXp);
+                if (newLevel > prevLevel) {
+                    logMessage(`Congratulations! Your Mining level is now ${newLevel}.`, 'log-level');
+                }
+                return true;
+            }
+            return false;
+        }
+
+        function rollGems() {
+            let r = Math.random();
+            let cumulative = 0;
+            let gemsArr = Object.values(GEMS).sort((a, b) => a.chance - b.chance);
+            for (let i = 0; i < gemsArr.length; i++) {
+                cumulative += gemsArr[i].chance;
+                if (r < cumulative) {
+                    state.gems[gemsArr[i].id]++;
+                    logMessage(`You found a rare ${gemsArr[i].name}!`, 'log-drop');
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function attemptSmelt(barId, amount) {
+            let barDef = BARS[barId];
+            let possible = amount;
+            for (let reqOre in barDef.req) {
+                let required = barDef.req[reqOre];
+                let available = state.ores[reqOre] || 0;
+                let canMake = Math.floor(available / required);
+                if (canMake < possible) possible = canMake;
+            }
+
+            if (possible > 0) {
+                let prevLevel = getLevel(state.smithingXp);
+                for (let reqOre in barDef.req) {
+                    state.ores[reqOre] -= barDef.req[reqOre] * possible;
+                }
+                state.bars[barId] += possible;
+                state.smithingXp += barDef.xp * possible;
+
+                let newLevel = getLevel(state.smithingXp);
+                if (newLevel > prevLevel) {
+                    logMessage(`Congratulations! Your Smithing level is now ${newLevel}.`, 'log-level');
+                }
+            }
+            return possible;
+        }
+
+        // --- Interactions ---
+
+        window.clickRock = function (id, event) {
+            let rockDef = ORES[id];
+            let level = getLevel(state.miningXp);
+            if (level < rockDef.level) {
+                logMessage(`You need level ${rockDef.level} Mining to mine this.`, 'log-red');
+                return;
+            }
+
+            if (state.activeRock !== id) {
+                state.activeRock = id;
+                state.activeRockEffort = 0;
+            }
+
+            let pickaxeDef = PICKAXES[state.pickaxe];
+            state.activeRockEffort += pickaxeDef.miningPower;
+
+            if (event) {
+                createFloatingText(`+${pickaxeDef.miningPower}`, event.clientX, event.clientY);
+            }
+
+            checkMineCompletion();
+            updateMiningUI();
+        }
+
+        // --- UI Rendering ---
+
+        function logMessage(msg, className = 'log-info') {
+            let logEl = document.getElementById('game-log');
+            let entry = document.createElement('div');
+            entry.className = 'log-entry ' + className;
+            let time = new Date().toLocaleTimeString([], { hour12: false });
+            entry.innerText = `[${time}] ${msg}`;
+            logEl.appendChild(entry);
+            if (logEl.childElementCount > 50) {
+                logEl.removeChild(logEl.firstChild);
+            }
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function createFloatingText(text, x, y) {
+            let el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = text;
+            el.style.left = (x - 10) + 'px';
+            el.style.top = (y - 20) + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => { document.body.removeChild(el); }, 1000);
+        }
+
+        function updateHeader() {
+            let miningLvl = getLevel(state.miningXp);
+            let smithingLvl = getLevel(state.smithingXp);
+
+            document.getElementById('hdr-mining').innerText = `Mining Lvl: ${miningLvl}`;
+            document.getElementById('hdr-smithing').innerText = `Smithing Lvl: ${smithingLvl}`;
+            document.getElementById('hdr-gold').innerText = `Gold: ${state.gold}`;
+
+            let currentXp = state.miningXp;
+            let nextXp = xpTable[miningLvl + 1] || xpTable[99];
+            let prevXp = xpTable[miningLvl];
+            let percent = 100;
+            if (miningLvl < 99) {
+                percent = ((currentXp - prevXp) / (nextXp - prevXp)) * 100;
+            }
+            document.getElementById('hdr-progress').style.width = percent + '%';
+            document.getElementById('hdr-progress-text').innerText = `${Math.floor(currentXp).toLocaleString()} / ${nextXp.toLocaleString()} XP`;
+        }
+
+        window.showTab = function (tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + tabId).classList.add('active');
+
+            lastRenderTime = 0; // Force update
+            tick(); // Run immediate update
+        }
+
+        function initMiningUI() {
+            let html = '<div class="panel"><div class="panel-title">Mining Nodes (Click to Mine)</div><div class="grid">';
+            for (let key in ORES) {
+                let rock = ORES[key];
+                html += `
+        <div id="rock-node-${key}" class="node" onclick="clickRock('${key}', event)">
+            <div>
+                <div class="node-icon">${rock.symbol}</div>
+                <div class="node-name" style="color: ${rock.color}">${rock.name}</div>
+                <div class="node-req">Lvl ${rock.level}</div>
+            </div>
+            <div class="progress-container">
+                <div id="rock-prog-${key}" class="progress-bar" style="width: 0%"></div>
+            </div>
+            <div id="rock-lock-${key}" class="node-locked-overlay" style="display:none;">Lvl ${rock.level} Required</div>
+        </div>`;
+            }
+            html += '</div></div>';
+            document.getElementById('tab-mining').innerHTML = html;
+        }
+
+        function updateMiningUI() {
+            let level = getLevel(state.miningXp);
+            for (let key in ORES) {
+                let rock = ORES[key];
+                let locked = level < rock.level;
+                let active = state.activeRock === key;
+
+                let nodeEl = document.getElementById(`rock-node-${key}`);
+                let lockEl = document.getElementById(`rock-lock-${key}`);
+
+                if (locked) {
+                    nodeEl.classList.add('node-locked');
+                    nodeEl.style.pointerEvents = 'none';
+                    lockEl.style.display = 'flex';
+                } else {
+                    nodeEl.classList.remove('node-locked');
+                    nodeEl.style.pointerEvents = 'auto';
+                    lockEl.style.display = 'none';
+                }
+
+                if (active) nodeEl.classList.add('active');
+                else nodeEl.classList.remove('active');
+
+                let progress = active ? (state.activeRockEffort / rock.effort) * 100 : 0;
+                document.getElementById(`rock-prog-${key}`).style.width = Math.min(progress, 100) + '%';
+            }
+        }
+
+        function renderSmelting() {
+            let html = '<div class="panel"><div class="panel-title">Smelting Furnace</div>';
+            let level = getLevel(state.smithingXp);
+            html += '<div class="grid">';
+            for (let key in BARS) {
+                let bar = BARS[key];
+                let locked = level < bar.level;
+                let isAuto = state.activeBar === key && state.shop.autoSmelt > 0;
+
+                let reqText = [];
+                for (let r in bar.req) reqText.push(`${bar.req[r]} ${ORES[r].name}`);
+
+                html += `
+        <div class="node ${locked ? 'node-locked' : ''} ${isAuto ? 'active' : ''}">
+            <div>
+                <div class="node-name" style="color: #ccc">${bar.name}</div>
+                <div class="node-req">Lvl ${bar.level}</div>
+                <div style="font-size: 0.85rem; margin-top:5px; color:var(--text-orange)">Req: ${reqText.join(', ')}</div>
+            </div>
+            ${!locked ? `
+               <div style="margin-top:15px; display:flex; flex-direction:column; gap:5px;">
+                   <button class="osrs-btn" onclick="smeltManual('${key}', 1)">Smelt 1</button>
+                   <button class="osrs-btn" onclick="smeltManual('${key}', 10)">Smelt 10</button>
+                   <button class="osrs-btn" onclick="smeltManual('${key}', 99999)">Smelt Max</button>
+                   ${state.shop.autoSmelt > 0 ? `<button class="osrs-btn" style="border-color:${isAuto ? '#0f0' : '#8c2a0a'}" onclick="setAutoSmelt('${key}')">${isAuto ? 'Stop Auto' : 'Auto Smelt'}</button>` : ''}
+               </div>
+            ` : '<div style="color:#ff0000; font-weight:bold; margin-top:10px;">Locked</div>'}
+        </div>`;
+            }
+            html += '</div></div>';
+            document.getElementById('tab-smelting').innerHTML = html;
+        }
+
+        window.smeltManual = function (barId, amount) {
+            let barDef = BARS[barId];
+            if (getLevel(state.smithingXp) < barDef.level) return;
+
+            let actual = attemptSmelt(barId, amount);
+            if (actual > 0) {
+                logMessage(`Smelted ${actual}x ${barDef.name}`);
+                lastRenderTime = 0; // force ui update
+            } else {
+                logMessage(`Not enough ores to smelt ${barDef.name}`, 'log-red');
+            }
+        }
+
+        window.setAutoSmelt = function (barId) {
+            if (state.activeBar === barId) state.activeBar = null;
+            else state.activeBar = barId;
+            lastRenderTime = 0;
+        }
+
+        function renderSmithing() {
+            let html = '<div class="panel"><div class="panel-title">Anvil (Upgrade Pickaxe)</div>';
+            let level = getLevel(state.smithingXp);
+
+            let currentIdx = Object.keys(PICKAXES).indexOf(state.pickaxe);
+            let nextKey = Object.keys(PICKAXES)[currentIdx + 1];
+
+            if (!nextKey) {
+                html += '<div style="text-align:center; color: #00ff00; font-size:1.2rem; padding: 20px;">You have the best pickaxe!</div>';
+            } else {
+                let pick = PICKAXES[nextKey];
+                let reqText = [];
+                for (let r in pick.cost) {
+                    let itemName = r;
+                    if (BARS[r]) itemName = BARS[r].name;
+                    else if (ORES[r]) itemName = ORES[r].name;
+                    reqText.push(`${pick.cost[r]} ${itemName}`);
+                }
+
+                let canSmith = level >= pick.smithReq;
+
+                html += `
+        <div style="text-align:center; padding: 20px;">
+            <div style="font-size: 3rem; margin-bottom: 10px;">⛏️</div>
+            <h3 style="color:var(--text-orange); margin-bottom:10px; font-size:1.5rem;">Next: ${pick.name} (Power: ${pick.miningPower})</h3>
+            <p style="margin-bottom:10px; font-weight:bold; color:${canSmith ? '#00ff00' : '#ff5555'}">Requires Smithing Lvl ${pick.smithReq}</p>
+            <p style="margin-bottom:20px; font-size:1.1rem; color: #aaa;">Cost: ${reqText.join(', ')}</p>
+            <button class="osrs-btn" style="font-size:1.2rem; padding: 10px 20px;" ${!canSmith ? 'disabled' : ''} onclick="smithPickaxe('${nextKey}')">Smith Pickaxe</button>
+        </div>`;
+            }
+            html += '</div>';
+            document.getElementById('tab-smithing').innerHTML = html;
+        }
+
+        window.smithPickaxe = function (key) {
+            let pick = PICKAXES[key];
+            if (getLevel(state.smithingXp) < pick.smithReq) return;
+
+            for (let r in pick.cost) {
+                let reqAmount = pick.cost[r];
+                let avail = 0;
+                if (state.bars[r] !== undefined) avail = state.bars[r];
+                else if (state.ores[r] !== undefined) avail = state.ores[r];
+                else if (state.gems[r] !== undefined) avail = state.gems[r];
+
+                if (avail < reqAmount) {
+                    logMessage(`Not enough resources for ${pick.name}`, 'log-red');
+                    return;
+                }
+            }
+
+            for (let r in pick.cost) {
+                let reqAmount = pick.cost[r];
+                if (state.bars[r] !== undefined) state.bars[r] -= reqAmount;
+                else if (state.ores[r] !== undefined) state.ores[r] -= reqAmount;
+                else if (state.gems[r] !== undefined) state.gems[r] -= reqAmount;
+            }
+
+            state.pickaxe = key;
+            logMessage(`Smithed a ${pick.name}!`, 'log-level');
+            lastRenderTime = 0;
+        }
+
+        function getShopCost(key) {
+            let item = SHOP_ITEMS[key];
+            let owned = state.shop[key] || 0;
+            return Math.floor(item.baseCost * Math.pow(1.15, owned));
+        }
+
+        function renderShop() {
+            let html = '<div class="panel"><div class="panel-title">Guild Shop</div>';
+            html += '<div class="grid">';
+
+            for (let key in SHOP_ITEMS) {
+                let item = SHOP_ITEMS[key];
+                let cost = getShopCost(key);
+                let owned = state.shop[key] || 0;
+
+                if (item.max && owned >= item.max) {
+                    html += `
+            <div class="node">
+                <div>
+                    <div class="node-name">${item.name}</div>
+                    <div style="color:#00ff00; margin-top:10px; font-weight:bold;">Maxed</div>
+                </div>
+            </div>`;
+                } else {
+                    let canBuy = state.gold >= cost;
+                    html += `
+            <div class="node ${!canBuy ? 'node-locked' : ''}">
+                <div>
+                    <div class="node-name">${item.name}</div>
+                    <div style="font-size:0.85rem; color:#aaa; margin:5px 0;">${item.desc}</div>
+                    <div style="color:var(--text-yellow); margin:10px 0; font-weight:bold;">Cost: ${cost.toLocaleString()} Gold</div>
+                    <div style="margin-bottom:10px; font-size:0.9rem;">Owned: ${owned}</div>
+                </div>
+                <button class="osrs-btn" onclick="buyShop('${key}')" ${!canBuy ? 'disabled' : ''}>Buy</button>
+            </div>`;
+                }
+            }
+
+            html += '</div></div>';
+            document.getElementById('tab-shop').innerHTML = html;
+        }
+
+        window.buyShop = function (key) {
+            let cost = getShopCost(key);
+            if (state.gold >= cost) {
+                state.gold -= cost;
+                state.shop[key] = (state.shop[key] || 0) + 1;
+                logMessage(`Bought ${SHOP_ITEMS[key].name} for ${cost} Gold.`);
+                lastRenderTime = 0;
+            }
+        }
+
+        function renderInventory() {
+            let html = '<div class="panel"><div class="panel-title">Inventory (Sell items for Gold)</div>';
+
+            let sellBtn = (cat, key, val, amount, name, color) => `
+        <div class="item-row">
+            <div><span class="item-name" style="color:${color || '#fff'}">${name}</span> <span class="item-qty">x${amount}</span></div>
+            <div style="display:flex; align-items:center;">
+                <span style="color:var(--text-yellow); margin-right:15px; font-weight:bold;">+${(amount * val).toLocaleString()} Gold</span>
+                <button class="osrs-btn" onclick="sellItem('${cat}','${key}', ${amount})">Sell All</button>
+            </div>
+        </div>
+    `;
+
+            let hasOres = false, hasBars = false, hasGems = false;
+
+            let oresHtml = '<h3 style="color:var(--text-orange); margin-top:10px; border-bottom:1px solid #444; padding-bottom:5px;">Ores</h3>';
+            for (let k in state.ores) {
+                if (state.ores[k] > 0) { oresHtml += sellBtn('ores', k, ORES[k].value, state.ores[k], ORES[k].name, ORES[k].color); hasOres = true; }
+            }
+
+            let barsHtml = '<h3 style="color:var(--text-orange); margin-top:20px; border-bottom:1px solid #444; padding-bottom:5px;">Bars</h3>';
+            for (let k in state.bars) {
+                if (state.bars[k] > 0) { barsHtml += sellBtn('bars', k, BARS[k].value, state.bars[k], BARS[k].name, '#ccc'); hasBars = true; }
+            }
+
+            let gemsHtml = '<h3 style="color:var(--text-orange); margin-top:20px; border-bottom:1px solid #444; padding-bottom:5px;">Gems</h3>';
+            for (let k in state.gems) {
+                if (state.gems[k] > 0) { gemsHtml += sellBtn('gems', k, GEMS[k].value, state.gems[k], GEMS[k].name, GEMS[k].color); hasGems = true; }
+            }
+
+            if (hasOres) html += oresHtml;
+            if (hasBars) html += barsHtml;
+            if (hasGems) html += gemsHtml;
+
+            if (!hasOres && !hasBars && !hasGems) {
+                html += '<div style="color:#aaa; text-align:center; padding:20px;">Your inventory is empty.</div>';
+            }
+
+            html += '</div>';
+            document.getElementById('tab-inventory').innerHTML = html;
+        }
+
+        window.sellItem = function (cat, key, amount) {
+            let val = 0;
+            if (cat === 'ores') val = ORES[key].value;
+            else if (cat === 'bars') val = BARS[key].value;
+            else if (cat === 'gems') val = GEMS[key].value;
+
+            let total = val * amount;
+            state[cat][key] -= amount;
+            state.gold += total;
+            logMessage(`Sold ${amount} items for ${total} Gold`);
+            lastRenderTime = 0;
+        }
+
+        function renderStats() {
+            let html = '<div class="panel"><div class="panel-title">Stats & Settings</div>';
+
+            html += `<p style="color:var(--text-white); margin-bottom: 10px; font-size:1.1rem;">Total Mining XP: <span style="color:var(--text-orange)">${Math.floor(state.miningXp).toLocaleString()}</span></p>`;
+            html += `<p style="color:var(--text-white); margin-bottom: 10px; font-size:1.1rem;">Total Smithing XP: <span style="color:var(--text-orange)">${Math.floor(state.smithingXp).toLocaleString()}</span></p>`;
+            html += `<p style="color:var(--text-white); margin-bottom: 10px; font-size:1.1rem;">Current Pickaxe: <span style="color:var(--text-orange)">${PICKAXES[state.pickaxe].name} (Power: ${PICKAXES[state.pickaxe].miningPower})</span></p>`;
+            html += `<p style="color:var(--text-white); margin-bottom: 10px; font-size:1.1rem;">Idle Mining Power: <span style="color:#00ff00">${getIdlePower().toFixed(1)}/sec</span></p>`;
+
+            html += '<hr style="border-color: var(--border-dark); margin: 25px 0;">';
+
+            html += `<button class="osrs-btn" style="margin-right:10px;" onclick="saveGame(); logMessage('Game manually saved.', 'log-level');">Save Game</button> `;
+            html += `<button class="osrs-btn" style="background:#600; border-color:#800;" onclick="hardReset()">Hard Reset</button>`;
+
+            html += '</div>';
+            document.getElementById('tab-stats').innerHTML = html;
+        }
+
+        window.hardReset = function () {
+            if (confirm('Are you sure you want to completely reset all progress? This cannot be undone.')) {
+                localStorage.removeItem('miningGuildSave');
+                location.reload();
+            }
+        }
+
+        // --- Save/Load ---
+
+        window.saveGame = function () {
+            localStorage.setItem('miningGuildSave', JSON.stringify(state));
+        }
+
+        function loadGame() {
+            let saved = localStorage.getItem('miningGuildSave');
+            if (saved) {
+                try {
+                    let parsed = JSON.parse(saved);
+                    state = { ...state, ...parsed };
+                    state.ores = { ...state.ores, ...(parsed.ores || {}) };
+                    state.bars = { ...state.bars, ...(parsed.bars || {}) };
+                    state.gems = { ...state.gems, ...(parsed.gems || {}) };
+                    state.shop = { ...state.shop, ...(parsed.shop || {}) };
+                } catch (e) {
+                    console.error("Save load failed", e);
+                }
+            }
+
+            let now = Date.now();
+            let offlineMs = now - state.lastTick;
+            if (offlineMs > 60000) {
+                logMessage(`Welcome back! You were away for ${Math.floor(offlineMs / 60000)} minutes.`, 'log-level');
+            }
+        }
+
+        // --- Init ---
+
+        window.onload = () => {
+            loadGame();
+            initMiningUI();
+            showTab('mining');
+            setInterval(tick, 100);
+            setInterval(saveGame, 5000);
+            if (state.miningXp === 0) logMessage('Welcome to the Mining Guild!');
+        };
+
+    </script>
+</body>
+
+</html>
